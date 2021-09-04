@@ -21,7 +21,7 @@ def get_uniswap_v3_pair(factory, token0, token1, fee):
 def get_uniswap_v2_permit_hash(verifying_addr, owner, spender, value, nonce, deadline):
     name = "Uniswap V2"
     version = "1"
-    chain_id = 1
+    chainid = 1
     data = {
         "types": {
             "EIP712Domain": [
@@ -41,7 +41,7 @@ def get_uniswap_v2_permit_hash(verifying_addr, owner, spender, value, nonce, dea
         "domain": {
             "name": name,
             "version": version,
-            "chainId": chain_id,
+            "chainId": chainid,
             "verifyingContract": verifying_addr,
         },
         "primaryType": "Permit",

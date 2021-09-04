@@ -1,0 +1,7 @@
+# Usage
+
+```
+yarn
+
+yarn test
+```
