@@ -3,9 +3,6 @@ from web3 import Web3 as web3
 from eth_abi import encode_abi
 from eth_account.messages import encode_structured_data
 
-from eth_account import Account
-import brownie
-
 UNISWAP_V3_POOL_INIT_CODE_HASH = "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54"
 
 def get_uniswap_v3_pair(factory, token0, token1, fee):
@@ -59,7 +56,6 @@ def get_permit_hash(verifying_addr, owner, spender, value, nonce, deadline):
 
     msg = encode_structured_data(data)
     digest = web3.keccak(b'\x19\x01' + msg.header + msg.body)
-
     return digest
 
 def test_uniswap_v3_pair():
@@ -71,7 +67,7 @@ def test_uniswap_v3_pair():
     pair = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
     assert get_uniswap_v3_pair(factory, token0, token1, fee) == pair
 
-def test_permit_hash(Permit, accounts):
+def test_permit_hash():
     owner = "0x617072Cb2a1897192A9d301AC53fC541d35c4d9D"
     spender = "0x2819c144D5946404C0516B6f817a960dB37D4929"
     value = web3.toWei(10, "ether")
@@ -83,21 +79,3 @@ def test_permit_hash(Permit, accounts):
 
     expected = "0x7b90248477de48c0b971e0af8951a55974733455191480e1e117c86cc2a6cd03"
     assert digest.hex() == expected
-
-    # print("generated digest:", digest.hex())
-
-    # p = Permit.deploy({'from': accounts[0]})
-    # d = p.digest(owner, spender, value, nonce, deadline)
-    # print("digest:", d)
-
-    # sig = owner.sign_message(digest).signature
-    # print("dir(sig)", dir(sig))
-    # r = sig[:32]
-    # s = sig[32:64]
-    # v = sig[64:65]
-    # print(sig.hex())
-    # print(r.hex())
-    # print(s.hex())
-    # print(v.hex())
-    # z = p.verify(owner.address, spender, value, nonce, deadline, v, r, s)
-    # print(z)
