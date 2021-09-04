@@ -18,7 +18,7 @@ def get_uniswap_v3_pair(factory, token0, token1, fee):
     return web3.toChecksumAddress(create2_hash[12:].hex())
 
 # from https://github.com/yearn/yearn-vaults/blob/95a87334762e5ed68a031a63a69c8cfc6ec03a07/tests/conftest.py#L92
-def get_permit_hash(verifying_addr, owner, spender, value, nonce, deadline):
+def get_uniswap_v2_permit_hash(verifying_addr, owner, spender, value, nonce, deadline):
     name = "Uniswap V2"
     version = "1"
     chain_id = 1
@@ -75,7 +75,7 @@ def test_permit_hash():
     deadline = 3133728498
     verifying_addr = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
 
-    digest = get_permit_hash(verifying_addr, owner, spender, value, nonce, deadline)
+    digest = get_uniswap_v2_permit_hash(verifying_addr, owner, spender, value, nonce, deadline)
 
     expected = "0x7b90248477de48c0b971e0af8951a55974733455191480e1e117c86cc2a6cd03"
     assert digest.hex() == expected
