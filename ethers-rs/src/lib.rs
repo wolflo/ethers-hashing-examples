@@ -1,27 +1,78 @@
 use ethers::{
     abi,
+    abi::Token,
     prelude::{Bytes, U256},
     types::Address,
     utils,
+    utils::{keccak256, parse_ether},
 };
+
+const UNISWAP_V2_USDC_ETH_PAIR: &'static str = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
+const UNISWAP_V3_USDC_ETH_PAIR: &'static str = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640";
 
 #[allow(dead_code)]
 fn get_uniswap_v3_pair(factory: Address, token0: Address, token1: Address, fee: u32) -> Address {
     let input = abi::encode(&vec![
-        abi::Token::Address(token0),
-        abi::Token::Address(token1),
-        abi::Token::Uint(U256::from(fee)),
+        Token::Address(token0),
+        Token::Address(token1),
+        Token::Uint(U256::from(fee)),
     ]);
-    let salt = utils::keccak256(&input);
+    let salt = keccak256(&input);
     let code = Bytes::from(hex::decode(UNISWAP_V3_POOL_INIT_CODE).unwrap());
 
     utils::get_create2_address(factory, salt.to_vec(), code)
 }
 
+// USDC-WETH pair
 #[allow(dead_code)]
-fn get_permit_hash(owner: Address, spender: Address, value: U256, nonce: U256, deadline: U256) -> [u8; 32] {
-    let domain_separator = "0xe8d93546d488d196c53f3e93ad73ba237e3fb527bddca6a240f54d03552dc70f";
-    [0; 32]
+fn get_uniswap_v2_permit_hash(
+    owner: Address,
+    spender: Address,
+    value: U256,
+    nonce: U256,
+    deadline: U256,
+) -> [u8; 32] {
+    let verifying_contract: Address = UNISWAP_V2_USDC_ETH_PAIR.parse().unwrap();
+    let name = "Uniswap V2";
+    let version = "1";
+    let chainid = 1;
+    let permit_typehash = utils::keccak256(
+        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
+    );
+    let domain_typehash = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+    );
+
+    // abi.encode
+    let domain_separator_input = abi::encode(&vec![
+        Token::Uint(U256::from(domain_typehash)),
+        Token::Uint(U256::from(keccak256(&name))),
+        Token::Uint(U256::from(keccak256(&version))),
+        Token::Uint(U256::from(chainid)),
+        Token::Address(verifying_contract),
+    ]);
+    let domain_separator = keccak256(&domain_separator_input);
+
+    // abi.encode
+    let struct_input = abi::encode(&vec![
+        Token::Uint(U256::from(permit_typehash)),
+        Token::Address(owner),
+        Token::Address(spender),
+        Token::Uint(value),
+        Token::Uint(nonce),
+        Token::Uint(deadline),
+    ]);
+    let struct_hash = keccak256(&struct_input);
+
+    // abi.encodePacked
+    let digest_input = [
+        &[0x19, 0x01],
+        domain_separator.as_ref(),
+        struct_hash.as_ref(),
+    ]
+    .concat();
+
+    keccak256(&digest_input)
 }
 
 #[cfg(test)]
@@ -30,7 +81,6 @@ mod tests {
 
     #[test]
     fn test_uniswap_v3_pair() {
-        // USDC-WETH
         let factory: Address = "0x1F98431c8aD98523631AE4a59f267346ea31F984"
             .parse()
             .unwrap();
@@ -41,14 +91,27 @@ mod tests {
             .parse()
             .unwrap();
         let fee: u32 = 500;
-        let pair: Address = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
-            .parse()
-            .unwrap();
-        assert_eq!(get_uniswap_v3_pair(factory, token0, token1, fee), pair);
+
+        let expected: Address = UNISWAP_V3_USDC_ETH_PAIR.parse().unwrap();
+        assert_eq!(get_uniswap_v3_pair(factory, token0, token1, fee), expected);
     }
 
+    #[test]
     fn test_eip712() {
-        let DOMAIN_SEPARATOR = "0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7";
+        let owner: Address = "0x617072Cb2a1897192A9d301AC53fC541d35c4d9D"
+            .parse()
+            .unwrap();
+        let spender: Address = "0x2819c144D5946404C0516B6f817a960dB37D4929"
+            .parse()
+            .unwrap();
+        let value = parse_ether(10).unwrap();
+        let nonce = U256::from(1);
+        let deadline = U256::from(3133728498 as u32);
+
+        let digest = get_uniswap_v2_permit_hash(owner, spender, value, nonce, deadline);
+
+        let expected = "0x7b90248477de48c0b971e0af8951a55974733455191480e1e117c86cc2a6cd03";
+        assert_eq!(hex::encode(digest), expected.strip_prefix("0x").unwrap());
     }
 }
 
